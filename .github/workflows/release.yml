@@ -126,6 +126,6 @@ jobs:
           tool: cargo-binstall
 
       - name: Publish to cargo-binstall
-        run: cargo binstall --no-confirm --index https://github.com/cargo-binstall/cargo-binstall-index
+        run: cargo binstall --no-confirm --index https://github.com/cargo-binstall/cargo-binstall-index rscommit
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

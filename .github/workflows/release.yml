@@ -99,7 +99,7 @@ jobs:
           path: artifacts/
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
@@ -120,7 +120,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install cargo-binstall
-        uses: taiki-e/install-action@cargo-binstall
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-binstall
 
       - name: Publish to cargo-binstall
         run: cargo binstall --no-confirm --no-verify --index-url https://github.com/cargo-binstall/cargo-binstall-index

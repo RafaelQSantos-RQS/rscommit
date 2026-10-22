@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct Config {
     pub commit: CommitRules,
@@ -72,7 +71,6 @@ fn resolve_extends_path(current_config: &Path, extends: &str) -> anyhow::Result<
         Ok(base.join(path))
     }
 }
-
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CommitRules {
@@ -187,7 +185,6 @@ impl CommitRules {
         }
     }
 }
-
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -200,7 +197,6 @@ pub enum SubjectCase {
     Kebab,
     Any,
 }
-
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct HookConfig {
@@ -208,7 +204,6 @@ pub struct HookConfig {
     pub commit_msg: bool,
 }
 
-#[allow(dead_code)]
 fn default_types() -> Vec<String> {
     vec![
         "build".into(),
@@ -225,47 +220,38 @@ fn default_types() -> Vec<String> {
     ]
 }
 
-#[allow(dead_code)]
 fn default_max_subject_length() -> usize {
     72
 }
 
-#[allow(dead_code)]
 fn default_subject_case() -> SubjectCase {
     SubjectCase::Lower
 }
 
-#[allow(dead_code)]
 fn default_type_case() -> SubjectCase {
     SubjectCase::Lower
 }
 
-#[allow(dead_code)]
 fn default_scope_case() -> SubjectCase {
     SubjectCase::Lower
 }
 
-#[allow(dead_code)]
 fn default_subject_max_length() -> usize {
     72
 }
 
-#[allow(dead_code)]
 fn default_header_max_length() -> usize {
     72
 }
 
-#[allow(dead_code)]
 fn default_body_max_line_length() -> usize {
     100
 }
 
-#[allow(dead_code)]
 fn default_footer_max_line_length() -> usize {
     100
 }
 
-#[allow(dead_code)]
 fn default_true() -> bool {
     true
 }

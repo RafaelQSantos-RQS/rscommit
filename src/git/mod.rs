@@ -114,6 +114,7 @@ pub fn uninstall_commit_msg_hook(repo_path: &Path) -> Result<()> {
     Ok(())
 }
 
+    #[allow(dead_code)]
 pub fn is_git_repo(path: &Path) -> bool {
     path.join(".git").exists()
 }

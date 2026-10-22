@@ -4,7 +4,6 @@
 
 [![CI](https://github.com/RafaelQSantos-RQS/rscommit/workflows/CI/badge.svg)](https://github.com/RafaelQSantos-RQS/rscommit/actions)
 [![Release](https://github.com/RafaelQSantos-RQS/rscommit/workflows/Release/badge.svg)](https://github.com/RafaelQSantos-RQS/rscommit/actions)
-[![crates.io](https://img.shields.io/crates/v/rscommit.svg)](https://crates.io/crates/rscommit)
 [![license](https://img.shields.io/crate/l/rscommit.svg)](https://github.com/RafaelQSantos-RQS/rscommit/blob/main/LICENSE)
 
 ---
@@ -22,18 +21,60 @@ Ferramentas de padronização de commits (como Commitlint, Husky) costumam estar
 
 ## 📦 Instalação
 
-### Via cargo-binstall (recomendado)
+### 📥 Binário standalone (recomendado)
+Baixe o binário para sua plataforma na [página de releases](https://github.com/RafaelQSantos-RQS/rscommit/releases):
+
+```bash
+# Linux (x86_64)
+curl -L https://github.com/RafaelQSantos-RQS/rscommit/releases/latest/download/rscommit-x86_64-unknown-linux-gnu -o rscommit
+chmod +x rscommit
+sudo mv rscommit /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -L https://github.com/RafaelQSantos-RQS/rscommit/releases/latest/download/rscommit-aarch64-apple-darwin -o rscommit
+chmod +x rscommit
+sudo mv rscommit /usr/local/bin/
+
+# macOS (Intel)
+curl -L https://github.com/RafaelQSantos-RQS/rscommit/releases/latest/download/rscommit-x86_64-apple-darwin -o rscommit
+chmod +x rscommit
+sudo mv rscommit /usr/local/bin/
+
+# Windows (PowerShell)
+Invoke-WebRequest -Uri "https://github.com/RafaelQSantos-RQS/rscommit/releases/latest/download/rscommit-x86_64-pc-windows-msvc.exe" -OutFile "rscommit.exe"
+# Adicione ao PATH
+```
+
+> **Por que binário?** Zero dependências, instalação instantânea, funciona em qualquer máquina sem Rust, Node, Python ou gerenciadores de pacote.
+
+### Alternativas (se preferir)
+
+<details>
+<summary><strong>Via cargo-binstall</strong></summary>
+
 ```bash
 cargo binstall rscommit
 ```
+</details>
 
-### Via cargo
+<details>
+<summary><strong>Via cargo</strong></summary>
+
 ```bash
 cargo install rscommit
 ```
+</details>
 
-### Download manual
-Baixe o binário para sua plataforma na [página de releases](https://github.com/RafaelQSantos-RQS/rscommit/releases).
+<details>
+<summary><strong>Build from source</strong></summary>
+
+```bash
+git clone https://github.com/RafaelQSantos-RQS/rscommit
+cd rscommit
+cargo build --release
+# Binário em target/release/rscommit
+```
+</details>
 
 ### Verificar instalação
 ```bash

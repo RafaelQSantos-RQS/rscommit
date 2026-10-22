@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: rscommit-x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact: rscommit-x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: rscommit-aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: rscommit-x86_64-pc-windows-msvc.exe
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }} --locked
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: target/${{ matrix.target }}/release/rscommit*
+
+  checksum:
+    name: Generate checksums
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rscommit-*
+          merge-multiple: true
+          path: artifacts/
+
+      - name: Generate SHA256 checksums
+        run: |
+          cd artifacts
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: artifacts/SHA256SUMS.txt
+
+  release:
+    name: Create GitHub Release
+    needs: [build, checksum]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rscommit-*
+          merge-multiple: true
+          path: artifacts/
+
+      - name: Download checksums
+        uses: actions/download-artifact@v4
+        with:
+          name: checksums
+          path: artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  cargo-binstall:
+    name: Publish to cargo-binstall
+    needs: release
+    runs-on: ubuntu-latest
+    if: github.event.repository.owner.login == 'RafaelQSantos-RQS'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-binstall
+        run: cargo install cargo-binstall
+
+      - name: Publish to cargo-binstall
+        run: cargo binstall --no-confirm --no-verify --index-url https://github.com/cargo-binstall/cargo-binstall-index
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

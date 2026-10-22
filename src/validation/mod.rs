@@ -136,7 +136,6 @@ fn check_footer_leading_blank(message: &str, footers: &[(String, String)]) -> Re
     if !footers.is_empty() {
         let footer_start = message.rfind(&footers[0].0).unwrap_or(message.len());
         let before_footer = &message[..footer_start];
-        // Check if there's a blank line (two consecutive newlines) before footer
         if !before_footer.ends_with("\n\n") && !before_footer.trim_end().is_empty() {
             anyhow::bail!("Footer deve ser precedido por uma linha em branco");
         }
@@ -222,7 +221,7 @@ pub fn validate_commit(
         );
     }
 
-    // Type case (check raw_type before lowercasing)
+    // Type case
     if !check_case(&commit.raw_type, &rules.type_case) {
         anyhow::bail!(
             "Tipo '{}' não está em {}",
@@ -300,4 +299,397 @@ pub fn validate_commit(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn default_rules() -> crate::config::CommitRules {
+        crate::config::CommitRules::default()
+    }
+
+    // Strict rules but WITHOUT require_scope (most tests don't need scopes)
+    // Only basic rules enabled by default. Advanced rules (body, footer, breaking, signed-off-by)
+    // are disabled by default and enabled only in tests that specifically test them.
+    fn strict_rules() -> crate::config::CommitRules {
+        crate::config::CommitRules {
+            allowed_types: vec!["feat".into(), "fix".into(), "chore".into()],
+            allowed_scopes: vec!["auth".into(), "api".into()],
+            max_subject_length: 72,
+            require_scope: false,
+            subject_case: crate::config::SubjectCase::Lower,
+            type_case: crate::config::SubjectCase::Lower,
+            subject_full_stop: true,
+            subject_max_length: 50,
+            header_max_length: 80,
+            scope_case: crate::config::SubjectCase::Lower,
+            // Advanced rules disabled by default
+            body_leading_blank: false,
+            body_max_line_length: 100,
+            footer_leading_blank: false,
+            footer_max_line_length: 100,
+            breaking_change_exclamation_mark: false,
+            signed_off_by: false,
+        }
+    }
+
+    // Strict rules WITH require_scope for specific tests
+    fn strict_rules_with_scope() -> crate::config::CommitRules {
+        let mut r = strict_rules();
+        r.require_scope = true;
+        r
+    }
+
+    fn validate_msg(msg: &str, rules: &crate::config::CommitRules) -> Option<String> {
+        match parse_commit_message(msg) {
+            Ok(parsed) => validate_commit(&parsed, rules, msg)
+                .err()
+                .map(|e| e.to_string()),
+            Err(e) => Some(e.to_string()),
+        }
+    }
+
+    // ========== TYPE RULES ==========
+
+    #[test]
+    fn test_type_enum_valid() {
+        let rules = default_rules();
+        assert!(validate_msg("feat: add login", &rules).is_none());
+        assert!(validate_msg("fix: resolve bug", &rules).is_none());
+        assert!(validate_msg("chore: update deps", &rules).is_none());
+    }
+
+    #[test]
+    fn test_type_enum_invalid() {
+        let rules = strict_rules();
+        let err = validate_msg("invalid: msg", &rules).unwrap();
+        assert!(err.contains("Tipo de commit inválido"));
+        assert!(err.contains("invalid"));
+    }
+
+    #[test]
+    fn test_type_case_lower() {
+        let rules = strict_rules();
+        let err = validate_msg("FEAT: add login", &rules).unwrap();
+        assert!(err.contains("Tipo 'FEAT' não está em lower"));
+    }
+
+    #[test]
+    fn test_type_case_lower_valid() {
+        let rules = strict_rules();
+        assert!(validate_msg("feat: add login", &rules).is_none());
+    }
+
+    #[test]
+    fn test_type_empty() {
+        let rules = strict_rules();
+        let err = validate_msg(": add login", &rules).unwrap();
+        assert!(err.contains("Missing type") || err.contains("tipo"));
+    }
+
+    // ========== SUBJECT RULES ==========
+
+    #[test]
+    fn test_subject_full_stop() {
+        let rules = strict_rules();
+        let err = validate_msg("feat: add login.", &rules).unwrap();
+        assert!(err.contains("Subject não deve terminar com ponto final"));
+    }
+
+    #[test]
+    fn test_subject_full_stop_valid() {
+        let rules = strict_rules();
+        assert!(validate_msg("feat: add login", &rules).is_none());
+    }
+
+    #[test]
+    fn test_subject_max_length() {
+        let rules = strict_rules();
+        let long_subject = "a".repeat(51);
+        let err = validate_msg(&format!("feat: {}", long_subject), &rules).unwrap();
+        assert!(err.contains("Subject muito longo"));
+        assert!(err.contains("51"));
+    }
+
+    #[test]
+    fn test_subject_max_length_valid() {
+        let rules = strict_rules();
+        let exact = "a".repeat(50);
+        assert!(validate_msg(&format!("feat: {}", exact), &rules).is_none());
+    }
+
+    #[test]
+    fn test_subject_case_lower() {
+        let rules = strict_rules();
+        let err = validate_msg("feat: Add login", &rules).unwrap();
+        assert!(err.contains("Subject 'Add login' não está em lower"));
+    }
+
+    #[test]
+    fn test_subject_case_lower_valid() {
+        let rules = strict_rules();
+        assert!(validate_msg("feat: add login", &rules).is_none());
+    }
+
+    // ========== HEADER RULES ==========
+
+    #[test]
+    fn test_header_max_length() {
+        let mut rules = strict_rules();
+        // Increase subject limit so we can test header limit (80) without hitting subject limit (72 default)
+        rules.max_subject_length = 100;
+        rules.subject_max_length = 100;
+        let err = validate_msg("feat(auth): this header is way too long and exceeds the maximum allowed length of eighty characters", &rules).unwrap();
+        assert!(err.contains("Header muito longo"));
+    }
+
+    #[test]
+    fn test_header_max_length_valid() {
+        let rules = strict_rules();
+        assert!(validate_msg("feat(auth): short header", &rules).is_none());
+    }
+
+    // ========== SCOPE RULES ==========
+
+    #[test]
+    fn test_scope_enum_valid() {
+        let rules = strict_rules();
+        assert!(validate_msg("feat(auth): add login", &rules).is_none());
+        assert!(validate_msg("fix(api): resolve bug", &rules).is_none());
+    }
+
+    #[test]
+    fn test_scope_enum_invalid() {
+        let rules = strict_rules();
+        let err = validate_msg("feat(unknown): test", &rules).unwrap();
+        assert!(err.contains("Scope inválido"));
+        assert!(err.contains("unknown"));
+    }
+
+    #[test]
+    fn test_scope_case_lower() {
+        let rules = strict_rules();
+        let err = validate_msg("feat(AUTH): test", &rules).unwrap();
+        assert!(err.contains("Scope 'AUTH' não está em lower"));
+    }
+
+    #[test]
+    fn test_scope_case_lower_valid() {
+        let rules = strict_rules();
+        assert!(validate_msg("feat(auth): test", &rules).is_none());
+    }
+
+    #[test]
+    fn test_require_scope() {
+        let rules = strict_rules_with_scope();
+        let err = validate_msg("feat: no scope", &rules).unwrap();
+        assert!(err.contains("Scope é obrigatório"));
+    }
+
+    #[test]
+    fn test_require_scope_false() {
+        let rules = default_rules();
+        assert!(validate_msg("feat: no scope", &rules).is_none());
+    }
+
+    // ========== BODY RULES ==========
+
+    #[test]
+    fn test_body_max_line_length() {
+        let mut rules = strict_rules();
+        rules.body_max_line_length = 100;
+        let long_line = "a".repeat(101);
+        let msg = format!("feat: add login\n\n{}", long_line);
+        let err = validate_msg(&msg, &rules).unwrap();
+        assert!(err.contains("Linha 1 do body muito longa"));
+        assert!(err.contains("101"));
+    }
+
+    #[test]
+    fn test_body_max_line_length_url_allowed() {
+        let mut rules = strict_rules();
+        rules.body_max_line_length = 100;
+        let url = "https://example.com/very/long/url/that/exceeds/one/hundred/characters/and/should/be/allowed";
+        let msg = format!("feat: add login\n\n{}", url);
+        assert!(validate_msg(&msg, &rules).is_none());
+    }
+
+    // ========== FOOTER RULES ==========
+
+    #[test]
+    fn test_footer_max_line_length() {
+        let mut rules = strict_rules();
+        rules.footer_max_line_length = 100;
+        let long_footer = "a".repeat(120);
+        let msg = format!("feat: add login\n\n\nBreaking: {}", long_footer);
+        let err = validate_msg(&msg, &rules).unwrap();
+        assert!(err.contains("Linha do footer muito longa"));
+    }
+
+    // ========== BREAKING CHANGE XNOR ==========
+
+    #[test]
+    fn test_breaking_change_xnor_both() {
+        let mut rules = strict_rules();
+        rules.breaking_change_exclamation_mark = true;
+        assert!(validate_msg("feat!: add login\n\nBREAKING CHANGE: removes api", &rules).is_none());
+    }
+
+    #[test]
+    fn test_breaking_change_xnor_neither() {
+        let mut rules = strict_rules();
+        rules.breaking_change_exclamation_mark = true;
+        assert!(validate_msg("feat: add login", &rules).is_none());
+    }
+
+    #[test]
+    fn test_breaking_change_xnor_only_exclamation() {
+        let mut rules = strict_rules();
+        rules.breaking_change_exclamation_mark = true;
+        let err = validate_msg("feat!: add login", &rules).unwrap();
+        assert!(
+            err.contains("Breaking change deve ter '!' no header E 'BREAKING CHANGE' no footer")
+        );
+    }
+
+    #[test]
+    fn test_breaking_change_xnor_only_footer() {
+        let mut rules = strict_rules();
+        rules.breaking_change_exclamation_mark = true;
+        let err = validate_msg("feat: add login\n\nBREAKING CHANGE: removes api", &rules).unwrap();
+        assert!(
+            err.contains("Breaking change deve ter '!' no header E 'BREAKING CHANGE' no footer")
+        );
+    }
+
+    // ========== SIGNED-OFF-BY ==========
+
+    #[test]
+    fn test_signed_off_by_required() {
+        let mut rules = strict_rules();
+        rules.signed_off_by = true;
+        let err = validate_msg("feat: add login", &rules).unwrap();
+        assert!(err.contains("Footer 'Signed-off-by' é obrigatório"));
+    }
+
+    #[test]
+    fn test_signed_off_by_valid() {
+        let rules = strict_rules();
+        assert!(
+            validate_msg(
+                "feat: add login\n\nSigned-off-by: John <john@example.com>",
+                &rules
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn test_signed_off_by_case_insensitive() {
+        let rules = strict_rules();
+        assert!(
+            validate_msg(
+                "feat: add login\n\nSIGNED-OFF-BY: John <john@example.com>",
+                &rules
+            )
+            .is_none()
+        );
+        assert!(
+            validate_msg(
+                "feat: add login\n\nsigned-off-by: John <john@example.com>",
+                &rules
+            )
+            .is_none()
+        );
+    }
+
+    // ========== EDGE CASES ==========
+
+    #[test]
+    fn test_parse_commit_message_basic() {
+        let parsed = parse_commit_message("feat(auth): add login").unwrap();
+        assert_eq!(parsed.commit_type, "feat");
+        assert_eq!(parsed.raw_type, "feat");
+        assert_eq!(parsed.scope, Some("auth".into()));
+        assert_eq!(parsed.subject, "add login");
+        assert!(!parsed.breaking);
+    }
+
+    #[test]
+    fn test_parse_commit_message_breaking() {
+        let parsed = parse_commit_message("feat!: add login").unwrap();
+        assert!(parsed.breaking);
+        assert!(parsed.header.contains('!'));
+    }
+
+    #[test]
+    fn test_parse_commit_message_with_body_and_footer() {
+        let parsed =
+            parse_commit_message("feat: add login\n\nbody here\n\nBREAKING CHANGE: test").unwrap();
+        assert_eq!(parsed.body, Some("body here".into()));
+        assert_eq!(parsed.footers.len(), 1);
+        assert_eq!(parsed.footers[0].0, "BREAKING CHANGE");
+    }
+
+    #[test]
+    fn test_case_sentence() {
+        let mut rules = strict_rules();
+        rules.subject_case = crate::config::SubjectCase::Sentence;
+        assert!(validate_msg("feat: Add login", &rules).is_none());
+        let err = validate_msg("feat: add login", &rules).unwrap();
+        assert!(err.contains("sentence"));
+    }
+
+    #[test]
+    fn test_case_pascal() {
+        let mut rules = strict_rules();
+        rules.subject_case = crate::config::SubjectCase::Pascal;
+        assert!(validate_msg("feat: Add Login", &rules).is_none());
+    }
+
+    #[test]
+    fn test_case_kebab() {
+        let mut rules = strict_rules();
+        rules.subject_case = crate::config::SubjectCase::Kebab;
+        assert!(validate_msg("feat: add-login-feature", &rules).is_none());
+    }
+
+    #[test]
+    fn test_case_any() {
+        let mut rules = strict_rules();
+        rules.subject_case = crate::config::SubjectCase::Any;
+        assert!(validate_msg("feat: AdD LoGiN", &rules).is_none());
+    }
+
+    #[test]
+    fn test_scope_enum_empty_allows_any() {
+        let mut rules = strict_rules();
+        rules.allowed_scopes = vec![];
+        assert!(validate_msg("feat(any): test", &rules).is_none());
+        assert!(validate_msg("feat(whatever): test", &rules).is_none());
+    }
+
+    #[test]
+    fn test_max_subject_length_original() {
+        let mut rules = default_rules();
+        rules.max_subject_length = 20;
+        let err = validate_msg("feat: this subject is too long", &rules).unwrap();
+        assert!(err.contains("Subject muito longo"));
+    }
+
+    #[test]
+    fn test_breaking_change_disabled() {
+        let mut rules = strict_rules();
+        rules.breaking_change_exclamation_mark = false;
+        assert!(validate_msg("feat!: add login", &rules).is_none());
+        assert!(validate_msg("feat: add login\n\nBREAKING CHANGE: test", &rules).is_none());
+    }
+
+    #[test]
+    fn test_signed_off_by_disabled() {
+        let mut rules = strict_rules();
+        rules.signed_off_by = false;
+        assert!(validate_msg("feat: add login", &rules).is_none());
+    }
 }

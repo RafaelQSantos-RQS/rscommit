@@ -52,8 +52,10 @@ Invoke-WebRequest -Uri "https://github.com/RafaelQSantos-RQS/rscommit/releases/l
 <details>
 <summary><strong>Via cargo-binstall</strong></summary>
 
+> ⚠️ **Em desenvolvimento (backlog)** — Publicação no cargo-binstall está planejada para futuras versões.
+
 ```bash
-cargo binstall rscommit
+# cargo binstall rscommit
 ```
 </details>
 

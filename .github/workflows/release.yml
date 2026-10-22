@@ -111,28 +111,3 @@ jobs:
             artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  cargo-binstall:
-    name: Publish to cargo-binstall
-    needs: release
-    runs-on: ubuntu-latest
-    if: github.event.repository.owner.login == 'RafaelQSantos-RQS'
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Configure git credentials for cargo-binstall
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git config --global credential.helper store
-          echo "https://github-actions:${{ secrets.GITHUB_TOKEN }}@github.com" > ~/.git-credentials
-
-      - name: Install cargo-binstall
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-binstall
-
-      - name: Publish to cargo-binstall
-        run: cargo binstall --no-confirm --index https://github.com/cargo-binstall/cargo-binstall-index rscommit
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

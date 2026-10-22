@@ -3,8 +3,14 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE*'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE*'
 
 env:
   CARGO_TERM_COLOR: always
@@ -48,6 +54,7 @@ jobs:
   test-matrix:
     name: Test matrix
     runs-on: ${{ matrix.os }}
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -75,3 +82,4 @@ jobs:
 
       - name: Run tests
         run: cargo test --locked
+EOF

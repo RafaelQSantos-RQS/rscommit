@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -7,6 +8,17 @@ pub struct Config {
     pub hooks: HookConfig,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extends: Option<String>,
+}
+
+impl Config {
+    pub fn load(path: &Path) -> anyhow::Result<Self> {
+        if !path.exists() {
+            return Ok(Config::default());
+        }
+        let content = std::fs::read_to_string(path)?;
+        let config: Config = toml::from_str(&content)?;
+        Ok(config)
+    }
 }
 
 #[allow(dead_code)]

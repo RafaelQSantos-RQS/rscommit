@@ -49,7 +49,7 @@ pub fn validate(message: Option<String>) -> Result<()> {
         }
     };
 
-    let config = Config::default();
+    let config = Config::load(Path::new("rscommit.toml"))?;
 
     let parsed = parse_commit_message(&msg)?;
     validate_commit(&parsed, &config.commit)?;

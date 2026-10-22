@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::git::{install_commit_msg_hook, uninstall_commit_msg_hook};
 use crate::validation::{parse_commit_message, validate_commit};
 use anyhow::Result;
 use std::fs;
@@ -59,9 +60,11 @@ pub fn validate(message: Option<String>) -> Result<()> {
 }
 
 pub fn install() -> Result<()> {
-    todo!("Implement install command")
+    let repo_path = Path::new(".");
+    install_commit_msg_hook(repo_path)
 }
 
 pub fn uninstall() -> Result<()> {
-    todo!("Implement uninstall command")
+    let repo_path = Path::new(".");
+    uninstall_commit_msg_hook(repo_path)
 }

@@ -4,12 +4,15 @@ use std::fs;
 use std::path::Path;
 
 fn get_rscommit_path() -> String {
-    // Try to find rscommit binary
-    // 1. Check if installed in PATH
+    // 1. Use the currently running binary (most reliable for installed binaries)
+    if let Ok(path) = env::current_exe() {
+        return path.display().to_string();
+    }
+    // 2. Check if installed in PATH
     if let Ok(path) = which::which("rscommit") {
         return path.display().to_string();
     }
-    // 2. Check cargo target directory (development)
+    // 3. Check cargo target directory (development)
     if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
         let debug_path = Path::new(&manifest_dir).join("target/debug/rscommit");
         if debug_path.exists() {
@@ -20,7 +23,7 @@ fn get_rscommit_path() -> String {
             return release_path.display().to_string();
         }
     }
-    // 3. Fallback to just "rscommit" (will use PATH)
+    // 4. Fallback to just "rscommit" (will use PATH)
     "rscommit".to_string()
 }
 

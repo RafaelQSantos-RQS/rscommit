@@ -87,7 +87,8 @@ pub fn uninstall_commit_msg_hook(repo_path: &Path) -> Result<()> {
         );
     }
 
-    let hook_path = git_dir.join("hooks").join("commit-msg");
+    let hooks_dir = git_dir.join("hooks");
+    let hook_path = hooks_dir.join("commit-msg");
 
     if !hook_path.exists() {
         println!("⚠ Nenhum hook commit-msg encontrado");
@@ -101,7 +102,7 @@ pub fn uninstall_commit_msg_hook(repo_path: &Path) -> Result<()> {
         println!("✓ Hook commit-msg removido: {}", hook_path.display());
 
         // Restore backup if exists
-        let backup = hook_path.with_extension("msg.rscommit.bak");
+        let backup = hooks_dir.join("commit-msg.rscommit.bak");
         if backup.exists() {
             fs::rename(&backup, &hook_path)?;
             println!("✓ Hook anterior restaurado de: {}", backup.display());

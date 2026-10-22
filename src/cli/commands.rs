@@ -34,7 +34,7 @@ pub fn init() -> Result<()> {
 }
 
 pub fn validate(message: Option<String>) -> Result<()> {
-    let msg = match message {
+    let raw_msg = match message {
         Some(m) => m,
         None => {
             let hook_msg_path = Path::new(".git/COMMIT_EDITMSG");
@@ -51,8 +51,8 @@ pub fn validate(message: Option<String>) -> Result<()> {
 
     let config = Config::load(Path::new("rscommit.toml"))?;
 
-    let parsed = parse_commit_message(&msg)?;
-    validate_commit(&parsed, &config.commit)?;
+    let parsed = parse_commit_message(&raw_msg)?;
+    validate_commit(&parsed, &config.commit, &raw_msg)?;
 
     println!("✓ Commit message válida");
     Ok(())

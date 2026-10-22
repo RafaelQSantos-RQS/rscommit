@@ -42,7 +42,10 @@ pub struct CommitRules {
     // Subject rules
     #[serde(default)]
     pub subject_full_stop: bool,
-    #[serde(default = "default_subject_max_length")]
+    #[serde(
+        default = "default_subject_max_length",
+        skip_serializing_if = "is_default_subject_max_length"
+    )]
     pub subject_max_length: usize,
 
     // Header rules
@@ -97,16 +100,17 @@ pub struct HookConfig {
 #[allow(dead_code)]
 fn default_types() -> Vec<String> {
     vec![
+        "build".into(),
+        "chore".into(),
+        "ci".into(),
+        "docs".into(),
         "feat".into(),
         "fix".into(),
-        "chore".into(),
-        "docs".into(),
-        "refactor".into(),
-        "test".into(),
-        "ci".into(),
-        "build".into(),
         "perf".into(),
+        "refactor".into(),
         "revert".into(),
+        "style".into(),
+        "test".into(),
     ]
 }
 
@@ -137,7 +141,7 @@ fn default_subject_max_length() -> usize {
 
 #[allow(dead_code)]
 fn default_header_max_length() -> usize {
-    100
+    72
 }
 
 #[allow(dead_code)]
@@ -153,6 +157,10 @@ fn default_footer_max_line_length() -> usize {
 #[allow(dead_code)]
 fn default_true() -> bool {
     true
+}
+
+fn is_default_subject_max_length(value: &usize) -> bool {
+    *value == 72
 }
 
 impl Default for CommitRules {

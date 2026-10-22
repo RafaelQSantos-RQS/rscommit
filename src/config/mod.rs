@@ -505,7 +505,7 @@ allowed_types = ["chore"]
 [hooks]
 commit_msg = false
 "##,
-                base.display()
+                base.display().to_string().replace('\\', "/")
             ),
         )
         .unwrap();
